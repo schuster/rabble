@@ -1,4 +1,4 @@
-use std::convert::{From, TryFrom, TryInto};
+use std::convert::{TryFrom, TryInto};
 use errors::Error;
 use pid::Pid;
 use correlation_id::CorrelationId;
@@ -29,13 +29,14 @@ impl<T: UserMsg> TryFrom<pb_messages::Envelope> for Envelope<T> {
     }
 }
 
-impl<T: UserMsg> From<Envelope<T>> for pb_messages::Envelope {
-    fn from(envelope: Envelope<T>) -> pb_messages::Envelope {
+impl<T: UserMsg> TryFrom<Envelope<T>> for pb_messages::Envelope {
+    type Error = Error;
+    fn try_from(envelope: Envelope<T>) -> Result<pb_messages::Envelope, Error> {
         let mut pb_envelope = pb_messages::Envelope::new();
         pb_envelope.set_to(envelope.to.into());
         pb_envelope.set_from(envelope.from.into());
-        pb_envelope.set_msg(envelope.msg.into());
+        pb_envelope.set_msg(envelope.msg.try_into()?);
         pb_envelope.set_cid(envelope.correlation_id.into());
-        pb_envelope
+        Ok(pb_envelope)
     }
 }

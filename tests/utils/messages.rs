@@ -1,4 +1,4 @@
-use rabble::{Pid, UserMsg, Error};
+use rabble::{Pid, UserMsg, Result};
 use super::pb_rabble_user_msg::{self, PbRabbleUserMsg};
 use protobuf::{Message, parse_from_bytes};
 
@@ -23,7 +23,7 @@ pub enum ApiClientMsg {
 }
 
 impl UserMsg for RabbleUserMsg {
-    fn to_bytes(self) -> Vec<u8> {
+    fn to_bytes(self) -> Result<Vec<u8>> {
         use RabbleUserMsg::*;
         let mut msg = PbRabbleUserMsg::new();
         match self {
@@ -36,10 +36,10 @@ impl UserMsg for RabbleUserMsg {
                 msg.set_history(history);
             }
         }
-        msg.write_to_bytes().unwrap()
+        Ok(msg.write_to_bytes()?)
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Result<RabbleUserMsg, Error> {
+    fn from_bytes(bytes: Vec<u8>) -> Result<RabbleUserMsg> {
         let mut msg: PbRabbleUserMsg = parse_from_bytes(&bytes[..])?;
         use RabbleUserMsg::*;
         if msg.has_op() {

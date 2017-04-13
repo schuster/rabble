@@ -1,4 +1,4 @@
-use std::convert::{From, TryFrom};
+use std::convert::TryFrom;
 use std::iter::IntoIterator;
 use metrics::Metric;
 use pb_messages::{self, PbMsg};
@@ -126,12 +126,13 @@ impl<T: UserMsg> TryFrom<PbMsg> for Msg<T> {
     }
 }
 
-impl<T: UserMsg> From<Msg<T>> for PbMsg {
-    fn from(msg: Msg<T>) -> PbMsg {
+impl<T: UserMsg> TryFrom<Msg<T>> for PbMsg {
+    type Error = Error;
+    fn try_from(msg: Msg<T>) -> Result<PbMsg, Error> {
         let mut pbmsg = PbMsg::new();
         match msg {
             Msg::User(user_msg) => {
-                let bytes = user_msg.to_bytes();
+                let bytes = user_msg.to_bytes()?;
                 pbmsg.set_user_msg(bytes);
             },
             Msg::Req(Req::GetMembership) => {
@@ -196,6 +197,6 @@ impl<T: UserMsg> From<Msg<T>> for PbMsg {
                 pbmsg.set_members(pb_members);
             }
         }
-        pbmsg
+        Ok(pbmsg)
     }
 }

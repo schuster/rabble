@@ -67,7 +67,7 @@ impl<T: UserMsg> TryFrom<ExternalMsg<T>> for pb_messages::ClusterServerMsg {
         let mut pb_msg = pb_messages::ClusterServerMsg::new();
         match msg {
             ExternalMsg::Envelope(envelope) => {
-                pb_msg.set_envelope(envelope.into());
+                pb_msg.set_envelope(envelope.try_into()?);
             },
             ExternalMsg::Ping => {
                 pb_msg.set_ping(true);
