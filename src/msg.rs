@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::iter::IntoIterator;
 use metrics::Metric;
 use pb_messages::{self, PbMsg};
@@ -83,22 +83,7 @@ impl<T: UserMsg> TryFrom<PbMsg> for Msg<T> {
             return Ok(Msg::Rpy(Rpy::Error(pb_msg.take_error())));
         }
         if pb_msg.has_metrics() {
-            let pb_metrics = pb_msg.take_metrics().take_metrics();
-            let mut metrics = Vec::with_capacity(pb_metrics.len());
-            for mut m in pb_metrics.into_iter() {
-                if !m.has_name() {
-                    return Err("All metrics must have names".into());
-                }
-                if m.has_gauge() {
-                    metrics.push((m.take_name(), Metric::Gauge(m.get_gauge())))
-                }
-                if m.has_counter() {
-                    metrics.push((m.take_name(), Metric::Counter(m.get_counter())))
-                }
-                // TODO: Add histogram support
-                return Err("No metric value set".into());
-            }
-            return Ok(Msg::Rpy(Rpy::Metrics(metrics)));
+            return Ok(Msg::Rpy(Rpy::Metrics(pb_msg.take_metrics().try_into()?)));
         }
         if pb_msg.has_processes() {
             let pids = pb_msg.take_processes()
@@ -163,18 +148,7 @@ impl<T: UserMsg> TryFrom<Msg<T>> for PbMsg {
                 pbmsg.set_error(error);
             },
             Msg::Rpy(Rpy::Metrics(metrics)) => {
-                let mut pb_metrics = pb_messages::Metrics::new();
-                pb_metrics.set_metrics(metrics.into_iter().map(|(name, m)| {
-                    let mut metric = pb_messages::Metric::new();
-                    metric.set_name(name);
-                    match m {
-                        Metric::Gauge(val) => metric.set_gauge(val),
-                        Metric::Counter(val) => metric.set_counter(val)
-                        // TODO: Add histogram support
-                    }
-                    metric
-                }).collect());
-                pbmsg.set_metrics(pb_metrics);
+                pbmsg.set_metrics(metrics.into())
             },
             Msg::Rpy(Rpy::Processes(pids)) => {
                 let mut processes = pb_messages::Pids::new();
